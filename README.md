@@ -12,3 +12,5 @@ if your requirements need messages to be replayed at a later date or for them to
 it is possible since the application can keep track, but that will be managed by the developer. And even then i would strongly reccomend looking at the solutions I listed above
 
 Will upload a formal design document at a later date.
+
+Feel free to email questions to slomanshield@gmail.com
