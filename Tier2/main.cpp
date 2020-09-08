@@ -23,7 +23,7 @@ int main()
 
 	if ((cc = tier2.CreateInternalQueue()) == QUEUE_SUCCESS)
 	{
-		cc = tier2.StartProcessing(20, 20, 25, 25, 200);
+		cc = tier2.StartProcessing(20, 20, 25, 25, 400);
 
 		if (cc == 0)
 		{
@@ -48,6 +48,12 @@ int main()
 			cc = tier2.StopProcessing();
 			if (cc != 0)
 			{
+				if (cc == connections_exist_on_shutdown)
+				{
+					printf("Connections exist, waiting... \n");
+					usleep(SERVER_UDP_INTERVAL); /* just sleep then check again */
+				}
+					
 				retries++;
 				if (retries >= stopRetries)
 				{

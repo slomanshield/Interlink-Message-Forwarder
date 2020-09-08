@@ -29,6 +29,7 @@ namespace MessageForwarder
 		pQueueManager = QueueWrapper::QueueManager::Instance();
 		internalThreadTimeoutMilli = THREAD_WAIT_TIMEOUT;
 		multiCastGroup = MULTI_CAST_GROUP;
+		listenOverrideTcpIP = "";
 
 		if (ioBufferSize < sizeof(TCP_MESSAGE) || ioBufferSize < sizeof(UDP_MULTICAST_PAYLOAD))
 			this->ioBufferSize = sizeof(TCP_MESSAGE) + sizeof(UDP_MULTICAST_PAYLOAD);
@@ -49,7 +50,7 @@ namespace MessageForwarder
 			TcpBaseFuncs::CloseFd(&connReadEpollFd);
 		DestroyTcpServer();
 
-		pQueueManager->DeleteQueue<StringStreamWrapper>(&i_command_queue_name, true);
+		pQueueManager->DeleteQueue<std::string>(&i_command_queue_name, true);
 
 		return;
 	}
@@ -60,7 +61,7 @@ namespace MessageForwarder
 		int64_t maxOutStanding = MAX_COMMAND_QUEUE_OUTSTANDING;
 		int32_t minimumReaders = 1;
 
-		cc = pQueueManager->CreateQueue<StringStreamWrapper>(&i_command_queue_name, &maxOutStanding, &minimumReaders);
+		cc = pQueueManager->CreateQueue<std::string>(&i_command_queue_name, &maxOutStanding, &minimumReaders);
 
 		if (cc != QUEUE_SUCCESS && cc != QUEUE_ALREADY_DEFINED)
 			return cc;
@@ -117,9 +118,14 @@ namespace MessageForwarder
 			
 	}
 
-	int MessageForwarder::Start()
+	int MessageForwarder::Start(std::string* tcpListenIP)
 	{
 		int cc = 0;
+		listenOverrideTcpIP = "";
+
+		if (tcpListenIP != nullptr && iMode == server)
+			listenOverrideTcpIP = *tcpListenIP;
+
 
 		/* create our sockets first */
 		cc = InitUdp();
@@ -335,10 +341,14 @@ namespace MessageForwarder
 	int MessageForwarder::ReCreateTcpServer()
 	{
 		int cc = 0;
+		char* pListenOverrideTcpIP = nullptr;
+
+		if (listenOverrideTcpIP.length() > 0)
+			pListenOverrideTcpIP = (char *)listenOverrideTcpIP.c_str();
 
 		DestroyTcpServer();
 		
-		cc = TcpBaseFuncs::Bind(port, &listenSocketFd, &listenSocketEpollFd, numConnectionsPerHost, true);
+		cc = TcpBaseFuncs::Bind(port, &listenSocketFd, &listenSocketEpollFd, numConnectionsPerHost, true, pListenOverrideTcpIP);
 
 		return cc;
 	}
@@ -346,10 +356,14 @@ namespace MessageForwarder
 	int MessageForwarder::InitTcpServer()
 	{
 		int cc = 0;
+		char* pListenOverrideTcpIP = nullptr;
+
+		if (listenOverrideTcpIP.length() > 0)
+			pListenOverrideTcpIP = (char *)listenOverrideTcpIP.c_str();
 
 		if (listenSocketFd == 0)
 			/* use numConnectionsPerHost as a back log (antcipate how many connects will come) */
-			cc = TcpBaseFuncs::Bind(port, &listenSocketFd, &listenSocketEpollFd, numConnectionsPerHost, true);
+			cc = TcpBaseFuncs::Bind(port, &listenSocketFd, &listenSocketEpollFd, numConnectionsPerHost, true, pListenOverrideTcpIP);
 		else
 			cc = tcp_server_socket_exists;
 
@@ -438,22 +452,21 @@ namespace MessageForwarder
 			pMsgIn->replyIpAddress = *replyIp;
 		else
 			pMsgIn->replyIpAddress = "";
-		pMsgIn->ss.Append((char*)&tcp_message, sizeof(TCP_MESSAGE)); /* first data header */
-		pMsgIn->ss.Append(s, length); /* then data */
+		pMsgIn->ss.append((char*)&tcp_message, sizeof(TCP_MESSAGE)); /* first data header */
+		pMsgIn->ss.append(s, length); /* then data */
 
 		cc = pQueueManager->PutDataOnQueue<MESSAGE>(&i_output_queue_name, *pMsgIn);
 
-		pMsgIn->ss.Clear();
+		pMsgIn->ss.clear(); /* clear */
 
 		return cc;
 	}
 
-	void MessageForwarder::ExtractUsrData(MESSAGE* pMsg, std::string* s)
+	void MessageForwarder::ExtractUsrData(MESSAGE* pMsg)
 	{
 		const char* startUsrData = nullptr;
-		*s = pMsg->ss.s.str();
-		startUsrData = s->c_str() + sizeof(TCP_MESSAGE);
-		pMsg->ss.Write((char*)startUsrData, s->length() - sizeof(TCP_MESSAGE));
+		startUsrData = pMsg->ss.data() + sizeof(TCP_MESSAGE);
+		pMsg->ss.assign((char*)startUsrData, pMsg->ss.length() - sizeof(TCP_MESSAGE));
 	}
 
 	int MessageForwarder::WaitForConnections(int timeoutMilli)
@@ -1188,13 +1201,13 @@ namespace MessageForwarder
 			else
 				dataToWrite = pConnInfo->lengthLeftToRead;
 
-			pConnInfo->ss.Append((char*)pConnInfo->readBuffer, dataToWrite);
+			pConnInfo->ss.append((char*)pConnInfo->readBuffer, dataToWrite);
 			pConnInfo->lengthLeftToRead -= dataToWrite; /* will be set to 0 once entire message has been consumed */
 
 			/* move buffer correctly */
 			RemoveDataFromReadBuffer(pConnInfo, dataToWrite);
 
-			if (pConnInfo->ss.Length() >= pConnInfo->lengthToRead) /* do we have everything */
+			if (pConnInfo->ss.length() >= pConnInfo->lengthToRead) /* do we have everything */
 			{
 				MESSAGE msg;
 				/* since we are locking the map and no error on socket we will have an entry */
@@ -1209,10 +1222,13 @@ namespace MessageForwarder
 				cc = pQueueManager->PutDataOnQueue<MESSAGE>(&i_input_queue_name, msg);
 
 				if (cc != QueueWrapper::QUEUE_SUCCESS)
+				{
 					printf("Error: ProcessTcpMessage (PutDataOnQueue) error code : %d dumping hex \n %s \n", cc,
-						    GetHexString((char*)pConnInfo->ss.s.str().c_str(), pConnInfo->ss.Length()).c_str());
+						GetHexString((char*)pConnInfo->ss.c_str(), pConnInfo->ss.length()).c_str());
+				}
+					
 
-				pConnInfo->ss.Clear();
+				pConnInfo->ss.clear();
 
 				if (manageOutStanding == true && iMode == client) /* only clients get responses decrement */
 					DecrementOutStanding(pIpConnInfo);
@@ -1265,7 +1281,7 @@ namespace MessageForwarder
 		UDP_MULTICAST_PAYLOAD payload = { 0 };
 		unsigned char buffer[UDP_RAW_BUFFER_SIZE] = { 0 };
 		uint64_t bufferLength = sizeof(buffer);
-		StringStreamWrapper ss;
+		std::string ss = "";
 		struct epoll_event events = { 0 };
 		int numEvents = 0;
 		int cc = 0;
@@ -1286,8 +1302,8 @@ namespace MessageForwarder
 
 						if (cc == 0 && dataRead > 0)
 						{
-							ss.Write((char*)buffer, dataRead);
-							cc = pMessageForwarder->pQueueManager->PutDataOnQueue<StringStreamWrapper>(&pMessageForwarder->i_command_queue_name, ss);
+							ss.assign((char*)buffer, dataRead);
+							cc = pMessageForwarder->pQueueManager->PutDataOnQueue<std::string>(&pMessageForwarder->i_command_queue_name, ss);
 
 							if (cc != QueueWrapper::QUEUE_SUCCESS)
 								printf("Error: UdpThread (PutDataOnQueue) error code %d \n", cc);
@@ -1372,16 +1388,16 @@ namespace MessageForwarder
 	{
 		MessageForwarder* pMessageForwarder = (MessageForwarder *)usrPtr;
 		int cc = 0;
-		RegisterQueueReadThread(pMessageForwarder->i_command_queue_name);
-		StringStreamWrapper ss;
+		RegisterQueueReadThread<std::string>(pMessageForwarder->i_command_queue_name);
+		std::string ss = "";
 
 		while (*running == true)
 		{
-			ss = pMessageForwarder->pQueueManager->GetDataFromQueue<StringStreamWrapper>(&pMessageForwarder->i_command_queue_name, 
+			ss = pMessageForwarder->pQueueManager->GetDataFromQueue<std::string>(&pMessageForwarder->i_command_queue_name,
 				                                                                    pMessageForwarder->internalThreadTimeoutMilli, &cc);
 			if (cc == QueueWrapper::QUEUE_SUCCESS)
 			{
-				cc = pMessageForwarder->ProcessUdpPayload((unsigned char*)ss.s.str().c_str(), ss.Length());
+				cc = pMessageForwarder->ProcessUdpPayload((unsigned char*)ss.c_str(), ss.length());
 
 				if (cc != 0 && cc != connections_already_exist)
 					printf("Error: UdpCommandProcessThread (ProcessUdpPayload) error code %d \n", cc);
@@ -1391,7 +1407,7 @@ namespace MessageForwarder
 
 			SleepOnQueue(cc);
 		}
-		RemoveQueueReadThread(pMessageForwarder->i_command_queue_name);
+		RemoveQueueReadThread<std::string>(pMessageForwarder->i_command_queue_name);
 		*stopped = true;
 	}
 
@@ -1490,11 +1506,10 @@ namespace MessageForwarder
 	{
 		MessageForwarder* pMessageForwarder = (MessageForwarder *)usrPtr;
 		int cc = 0;
-		RegisterQueueReadThread(pMessageForwarder->i_output_queue_name);
+		RegisterQueueReadThread<MESSAGE>(pMessageForwarder->i_output_queue_name);
 		std::shared_lock lockMap(pMessageForwarder->m_Maps); /* lock the maps since we need the pointers */
 		lockMap.unlock();
 		MESSAGE msg;
-		std::string ssUsrData = "";
 		uint32_t startingOffset = 0;
 		uint32_t currentOffset = 0;
 		SocketConnMapItr socketConnMapItr;
@@ -1517,7 +1532,7 @@ namespace MessageForwarder
 				{
 					msg.reasonCode = no_connection;
 					msg.delivered = false;
-					pMessageForwarder->ExtractUsrData(&msg, &ssUsrData);
+					pMessageForwarder->ExtractUsrData(&msg);
 					cc = pMessageForwarder->pQueueManager->PutDataOnQueue<MESSAGE>(&pMessageForwarder->i_input_queue_name, msg);
 
 					if (cc != QUEUE_SUCCESS)
@@ -1555,8 +1570,7 @@ namespace MessageForwarder
 
 					if (cc == 0) /* ok lets send */
 					{
-						bufferToSend = msg.ss.s.str();
-						uint64_t bufferLength = msg.ss.Length();
+						uint64_t bufferLength = msg.ss.length();
 						uint64_t lengthSent = 0;
 						uint64_t bufferOffset = 0;
 						bool sent = false;
@@ -1573,7 +1587,7 @@ namespace MessageForwarder
 
 								do
 								{
-									cc = pMessageForwarder->Send(pConnInfo->connFd, (unsigned char*)&bufferToSend[bufferOffset], bufferLength - bufferOffset, &lengthSent);
+									cc = pMessageForwarder->Send(pConnInfo->connFd, (unsigned char*)&msg.ss[bufferOffset], bufferLength - bufferOffset, &lengthSent);
 									bufferOffset += lengthSent;
 
 									if (bufferOffset != bufferLength && cc == ENOBUFS  ) /* normally we shouldnt get here but if we do */
@@ -1633,7 +1647,7 @@ namespace MessageForwarder
 					if(cc != 0)
 					{
 						msg.delivered = false;
-						pMessageForwarder->ExtractUsrData(&msg, &ssUsrData);
+						pMessageForwarder->ExtractUsrData(&msg);
 						cc = pMessageForwarder->pQueueManager->PutDataOnQueue<MESSAGE>(&pMessageForwarder->i_input_queue_name, msg);
 
 						if (cc != QUEUE_SUCCESS)
@@ -1646,7 +1660,7 @@ namespace MessageForwarder
 			
 			SleepOnQueue(cc);
 		}
-		RemoveQueueReadThread(pMessageForwarder->i_output_queue_name);
+		RemoveQueueReadThread<MESSAGE>(pMessageForwarder->i_output_queue_name);
 		*stopped = true;
 	}
 

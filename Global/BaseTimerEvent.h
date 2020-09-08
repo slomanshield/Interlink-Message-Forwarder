@@ -12,7 +12,7 @@
 #include <sys/resource.h>
 #include "ThreadWrapper.h"
 
-class BaseTimerEvent //TODO implement static routine to set RLIMIT for pending signals
+class BaseTimerEvent 
 {
 public:
 	BaseTimerEvent();
@@ -21,11 +21,11 @@ public:
 
 	static void BaseTimeEventHandler(union sigval arg);
 
-	static int IncreaseSignalLimit(rlim_t limit);
-
 	virtual void TimeEventHandler();
 
 	void DisarmTimer();
+
+	int Init();
 
 protected:
 	timer_t timerid;

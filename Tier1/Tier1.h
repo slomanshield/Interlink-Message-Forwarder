@@ -3,6 +3,7 @@
 #include "../Global/MessageForwarder.h"
 #include "../Global/MsgQueueDefines.h"
 #include "../Global/OutstandingMessageTracker.h"
+#include "../Global/InternalMsgTLV.h"
 
 using namespace OustandingMessages;
 using namespace MessageForwarder;
@@ -29,7 +30,7 @@ class Tier1
 		ThreadWrapper<threadProcess> processReplyThreadHandler;
 		ThreadWrapper<threadProcess> timeoutReplyThreadHandler;
 		QueueManager* pQueueManager;
-		OustandingMessageTracker< TierMessageInternal, std::string, 1000> mapOustandingMessages;
+		OustandingMessageTracker< InternalMsgTLV, std::string, 1000> mapOustandingMessages;
 		MessageForwarder::MessageForwarder* msgForwarder;
 
 		std::string tier2_queue;

@@ -2,6 +2,8 @@
 
 /* this implementation of POSIX timer uses threads, if your timer is needed in < 1ms please consider other options */
 
+/* NOTE: if you go over the max of ulimit pending signals timer_create will return an error update /etc/security/limits.conf for RLIMIT_PENDING if you need more than 15k per process */
+
 BaseTimerEvent::BaseTimerEvent()
 {
 	timerid = 0;
@@ -11,12 +13,30 @@ BaseTimerEvent::BaseTimerEvent()
 	se.sigev_value.sival_ptr = this;
 	se.sigev_notify_function = BaseTimeEventHandler;
 	se.sigev_notify_attributes = NULL;
-	timer_create(CLOCK_MONOTONIC, &se, &timerid);
 }
 
 BaseTimerEvent::~BaseTimerEvent()
 {
-	timer_delete(timerid);
+	if(timerid != 0)
+		timer_delete(timerid);
+}
+
+int BaseTimerEvent::Init()
+{
+	int cc = 0;
+
+	if (timerid == 0) /* Check if timer is init or not */
+	{
+		cc = timer_create(CLOCK_MONOTONIC, &se, &timerid);
+
+		if (cc != 0)
+		{
+			cc = errno;
+			printf("Error BaseTimerEvent::Init() error code is %d \n", cc);
+		}
+	}
+	
+	return cc;
 }
 
 void BaseTimerEvent::BaseTimeEventHandler(union sigval si)

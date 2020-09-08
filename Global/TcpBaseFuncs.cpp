@@ -345,7 +345,9 @@ int TcpBaseFuncs::SetIOBufferSize(int socketFd, size_t recvBytes, size_t sendByt
 {
 	int cc = 0;
 	
-	cc = setsockopt(socketFd, SOL_SOCKET, SO_RCVBUF, &recvBytes, sizeof(size_t));
+	cc = setsockopt(socketFd, SOL_SOCKET, SO_RCVBUFFORCE, &recvBytes, sizeof(size_t));
+	if(cc == -1)/* probably not privledged use normal, if value to large will be max */
+		cc = setsockopt(socketFd, SOL_SOCKET, SO_RCVBUF, &recvBytes, sizeof(size_t));
 
 	if (cc == -1)
 	{
@@ -356,7 +358,9 @@ int TcpBaseFuncs::SetIOBufferSize(int socketFd, size_t recvBytes, size_t sendByt
 
 	if (cc == 0)
 	{
-		cc = setsockopt(socketFd, SOL_SOCKET, SO_SNDBUF, &sendBytes, sizeof(size_t));
+		cc = setsockopt(socketFd, SOL_SOCKET, SO_SNDBUFFORCE, &sendBytes, sizeof(size_t));
+		if(cc == -1) /* probably not privledged use normal, if value to large will be max */
+			cc = setsockopt(socketFd, SOL_SOCKET, SO_SNDBUF, &sendBytes, sizeof(size_t));
 	}
 
 	if (cc == -1)

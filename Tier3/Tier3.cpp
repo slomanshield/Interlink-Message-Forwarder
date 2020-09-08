@@ -1,5 +1,5 @@
 #include "Tier3.h"
-
+#include "../Global/InternalMsgTLV.h"
 Tier3::Tier3()
 {
 	tier3_queue = TIER3_QUEUE;
@@ -142,12 +142,12 @@ void Tier3::recieveDataThread(bool * running, bool * stopped, void * usrPtr)
 	QueueManager* pQueueManager = pTier3->pQueueManager;
 	MESSAGE dataMsg;
 	MESSAGE msg;
-	TierMessageInternal data;
+	InternalMsgTLV data;
 	std::string replyIp = "";
-	std::string dataJson = "";
+	std::string TLVdata = "";
 	int cc = 0;
 	int ccQueue = 0;
-	RegisterQueueReadThread(pTier3->input_tier3_msg_queue);
+	RegisterQueueReadThread<MESSAGE>(pTier3->input_tier3_msg_queue);
 
 	while (*running == true)
 	{
@@ -158,12 +158,12 @@ void Tier3::recieveDataThread(bool * running, bool * stopped, void * usrPtr)
 			if (dataMsg.reasonCode == 0)
 			{
 				/* in here we would do some business logic then forward to the correct thread group based on type */
-				data.SetDataFromJson(dataMsg.ss.s.str()); /* lets get our reply Ip */
+				data.SetDataFromTLV((char*)dataMsg.ss.c_str(), dataMsg.ss.length());
 				replyIp = data.GetLastReplyIp(true);
 				data.SetSuccessProcess(true);
-				dataJson = data.GetJsonData();
+				data.GetTLVFromData(&TLVdata);
 
-				cc = pTier3->msgForwarderInput->SendData((char*)dataJson.c_str(), dataJson.length(), &replyIp, &msg);
+				cc = pTier3->msgForwarderInput->SendData((char*)TLVdata.c_str(), TLVdata.length(), &replyIp, &msg);
 
 				if (cc != 0)
 				{
@@ -180,6 +180,6 @@ void Tier3::recieveDataThread(bool * running, bool * stopped, void * usrPtr)
 		SleepOnQueue(ccQueue);
 	}
 
-	RemoveQueueReadThread(pTier3->input_tier3_msg_queue);
+	RemoveQueueReadThread<MESSAGE>(pTier3->input_tier3_msg_queue);
 	*stopped = true;
 }

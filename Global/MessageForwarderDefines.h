@@ -94,7 +94,7 @@ namespace MessageForwarder
 	/* Message used to send to MessageForwarder Queues */
 	struct MESSAGE
 	{
-		StringStreamWrapper ss;
+		std::string ss = "";
 		bool delivered = true; /* tells the application if the message was sent or not, init to true */
 		bool isResponse = false; /* tells application is is this response */
 		error_codes reasonCode = error_codes::success;
@@ -110,7 +110,7 @@ namespace MessageForwarder
 		bool markedForRemoval = false; /* used mainly when a server side is going down so the senders put no data on */
 		bool readyToProcess = false; /* to be used for readers only when an ack is sent by the server */
 		std::mutex m_conn; /* mutex used to lock when sending data (only 1 thread can send at a time) */
-		StringStreamWrapper ss; /* used by readers only */
+		std::string ss = ""; /* used by readers only */
 		uint64_t lengthToRead = 0; /* used by readers only */
 		uint64_t lengthLeftToRead = 0; /* used by readers only */
 		uint32_t lengthToSkip = 0; /* used by readers only */

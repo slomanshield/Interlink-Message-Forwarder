@@ -15,7 +15,7 @@ namespace MessageForwarder
 				             uint64_t ioBufferSize, bool manageOutStanding = true);
 			~MessageForwarder();
 			int Init();
-			int Start();
+			int Start(std::string* tcpListenIP = nullptr);
 			int Stop(int timeoutMilli, bool waitForOutStanding = true, bool forceServerClose = false);
 			void BeginStop(); /* Server only, used by a server to let clients know to stop sending messages and disconnect */
 			int SendData(char* s,uint64_t length, std::string* replyIp, MESSAGE* pMsgIn);
@@ -65,7 +65,7 @@ namespace MessageForwarder
 			uint32_t GetNextConnectionOffset();
 			uint32_t GetNextConnectionOffsetIp(IP_CONNECTION_INFO* ipConnInfo);
 			int ArmReadConnFd(int sockFd, bool add);
-			void ExtractUsrData(MESSAGE* pMsg, std::string* s);
+			void ExtractUsrData(MESSAGE* pMsg);
 		private:
 
 			/* used by sender threads (client mode)*/
@@ -117,6 +117,7 @@ namespace MessageForwarder
 			uint64_t ioBufferSize;
 			mode iMode;
 			std::string multiCastGroup;
+			std::string listenOverrideTcpIP;
 			QueueManager* pQueueManager;
 
 	};

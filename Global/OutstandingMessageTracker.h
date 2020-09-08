@@ -4,7 +4,7 @@
 namespace OustandingMessages
 {
 	using namespace QueueWrapper;
-	enum { SUCCESS, MAX_OUTSTANDING_REACHED, BUCKET_NOT_FOUND, MESSAGE_NOT_FOUND,MESSAGE_ALREADY_EXISTS,REPLY_WAIT_TIMEOUT };
+	enum { SUCCESS, MAX_OUTSTANDING_REACHED, BUCKET_NOT_FOUND, MESSAGE_NOT_FOUND,MESSAGE_ALREADY_EXISTS,REPLY_WAIT_TIMEOUT, TIMER_INIT_FAILED };
 	template<typename T, typename msgType,int numBuckets>
 	class OustandingMessageTracker
 	{
@@ -126,6 +126,7 @@ namespace OustandingMessages
 		{
 			mapOfMapsItr itr = GetBucket(msgId);
 			T retData;
+			*ccOut = SUCCESS;
 			if (itr != mapOfMaps.end())
 			{
 				MapBucketContainer* pMapBucketContainer = (*itr).second;
@@ -180,7 +181,7 @@ namespace OustandingMessages
 		{
 			return numMaxOutStanding;
 		}
-		void SetMaxOutStanding(uint64_t maxOustanding)// TODO call static base timer event routine to set pending signals for process 
+		void SetMaxOutStanding(uint64_t maxOustanding)
 		{
 			if (maxOustanding > entryMemoryStorage.size())
 			{
@@ -190,6 +191,7 @@ namespace OustandingMessages
 				for (uint64_t i = 0; i < maxOustanding - sizeList; i++)
 				{
 					MapBucketEntry* pTemp = new MapBucketEntry;
+					pTemp->timerEvent.Init(); /* For now just assume it will work */
 					entryFreeList.push_back(pTemp);
 					entryMemoryStorage.push_back(pTemp);
 				}

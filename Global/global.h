@@ -167,6 +167,31 @@ public:
 		time_stamp_create_nano = 0;
 		reply_ips.clear();
 	}
+	void CopyFields(const TierMessageInternal* pInternal)
+	{
+		this->padding = pInternal->padding;
+		this->test_data_id = pInternal->test_data_id;
+		this->process_timeout = pInternal->process_timeout;
+		this->successful_process = pInternal->successful_process;
+		this->time_stamp_create_nano = pInternal->time_stamp_create_nano;
+		this->reply_ips = pInternal->reply_ips;
+	}
+	TierMessageInternal(TierMessageInternal& msgInternal)
+	{
+		CopyFields(&msgInternal);
+	}
+	TierMessageInternal(const TierMessageInternal& msgInternal)
+	{
+		CopyFields(&msgInternal);
+	}
+	void operator=(TierMessageInternal&& msgInternal)
+	{
+		CopyFields(&msgInternal);
+	}
+	TierMessageInternal& operator=(const TierMessageInternal& msgInternal)
+	{
+		CopyFields(&msgInternal);
+	}
 	std::string GetJsonData()
 	{
 		Value replyArray;
@@ -181,7 +206,7 @@ public:
 		testDataId.SetString(test_data_id.c_str(), test_data_id.length());
 		paddingStr.SetString(padding.c_str(), padding.length());
 		doc.AddMember("test_data_id", testDataId, doc.GetAllocator());
-		doc.AddMember("padding", paddingStr, doc.GetAllocator());
+		doc.AddMember("padding",  paddingStr, doc.GetAllocator());
 		doc.AddMember("process_timeout", process_timeout, doc.GetAllocator());
 		doc.AddMember("successful_process", successful_process, doc.GetAllocator());
 		create_time_stamp.SetUint64(time_stamp_create_nano);
@@ -257,7 +282,7 @@ public:
 	{
 		this->test_data_id = test_data_id;
 	}
-	void SetPadding(std::string padding)
+	void SetPadding(char* padding)
 	{
 		this->padding = padding;
 	}
@@ -297,20 +322,20 @@ static void SetTermHandler()
 
 	sigaction(SIGKILL, &new_action, NULL);
 }
-
+template<typename T>
 static int RegisterQueueReadThread(std::string queueName)
 {
 	std::thread::id threadId = std::this_thread::get_id();
 	QueueWrapper::QueueManager* pQueueManager = QueueWrapper::QueueManager::Instance();
-	int cc = pQueueManager->RegisterThreadToQueue<StringStreamWrapper>(&queueName, threadId);
+	int cc = pQueueManager->RegisterThreadToQueue<T>(&queueName, threadId);
 	return cc;
 }
-
+template<typename T>
 static int RemoveQueueReadThread(std::string queueName)
 {
 	std::thread::id threadId = std::this_thread::get_id();
 	QueueWrapper::QueueManager* pQueueManager = QueueWrapper::QueueManager::Instance();
-	int cc = pQueueManager->RemoveThreadFromQueue<StringStreamWrapper>(&queueName, threadId);
+	int cc = pQueueManager->RemoveThreadFromQueue<T>(&queueName, threadId);
 	return cc;
 }
 
@@ -342,5 +367,7 @@ static std::string GetHexString(char* buffer, uint64_t length)
 
 	return hex_str;
 }
+
+
 
 #endif

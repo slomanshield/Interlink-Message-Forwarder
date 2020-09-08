@@ -156,7 +156,7 @@ int Tier1::CreateInternalQueue()
 	if(cc == QUEUE_SUCCESS)
 		cc = pQueueManager->CreateQueue<MESSAGE>(&reply_msg_queue, &maxOutStandingReply, &minimumReaders);
 	if(cc == QUEUE_SUCCESS)
-		cc = pQueueManager->CreateQueue<TierMessageInternal>(&output_queue, &maxOutStanding, &minimumReaders);
+		cc = pQueueManager->CreateQueue<InternalMsgTLV>(&output_queue, &maxOutStanding, &minimumReaders);
 	if (cc == QUEUE_SUCCESS)
 		cc = pQueueManager->CreateQueue<std::string>(&timeout_queue, &maxOutStandingTimeout, &minimumReaders);
 
@@ -216,21 +216,20 @@ void Tier1::recieveDataThread(bool * running, bool * stopped, void * usrPtr)
 	int cc = 0;
 	int ccQueue = 0;
 	std::string hostIp = "";
-	std::string dataMsg;
-	TierMessageInternal data;
-	StringStreamWrapper ss;
+	std::string dataMsg = "";
+	InternalMsgTLV data;
 	MESSAGE msg;
-	RegisterQueueReadThread(pTier1->output_queue);
+	RegisterQueueReadThread<InternalMsgTLV>(pTier1->output_queue);
 	pTier1->msgForwarder->GetHostIp(&hostIp);
 
 	while (*running == true)
 	{
-		data = pQueueManager->GetDataFromQueue<TierMessageInternal>(&pTier1->output_queue, MSG_QUEUE_CONNECTION_TIMEOUT, &ccQueue);
+		data = pQueueManager->GetDataFromQueue<InternalMsgTLV>(&pTier1->output_queue, MSG_QUEUE_CONNECTION_TIMEOUT, &ccQueue);
 
 		if (ccQueue == QUEUE_SUCCESS)
 		{
 			data.AddReplyIp(&hostIp);
-			dataMsg = data.GetJsonData();
+			data.GetTLVFromData(&dataMsg);
 
 			cc = pTier1->mapOustandingMessages.InsertData(data.GetTestDataId(), data, MSG_QUEUE_CONNECTION_TIMEOUT, &pTier1->timeout_queue);
 			if (cc == 0)
@@ -253,7 +252,7 @@ void Tier1::recieveDataThread(bool * running, bool * stopped, void * usrPtr)
 		SleepOnQueue(ccQueue);
 	}
 
-	RemoveQueueReadThread(pTier1->output_queue);
+	RemoveQueueReadThread<InternalMsgTLV>(pTier1->output_queue);
 	*stopped = true;
 }
 
@@ -264,7 +263,9 @@ void Tier1::processReplyThread(bool * running, bool * stopped, void * usrPtr)
 	MESSAGE dataMsg;
 	int cc = 0;
 	int ccQueue = 0;
-	RegisterQueueReadThread(pTier1->reply_msg_queue);
+	std::string dataStr = "";
+	InternalMsgTLV data;
+	RegisterQueueReadThread<MESSAGE>(pTier1->reply_msg_queue);
 
 	while (*running == true)
 	{
@@ -272,8 +273,7 @@ void Tier1::processReplyThread(bool * running, bool * stopped, void * usrPtr)
 		
 		if (ccQueue == QUEUE_SUCCESS)
 		{
-			TierMessageInternal data;
-			data.SetDataFromJson(dataMsg.ss.s.str());
+			data.SetDataFromTLV((char*)dataMsg.ss.c_str(), dataMsg.ss.length());
 
 			cc = pTier1->mapOustandingMessages.RemoveData(data.GetTestDataId());
 
@@ -289,6 +289,7 @@ void Tier1::processReplyThread(bool * running, bool * stopped, void * usrPtr)
 				printf("message recevied test_data_id is %s and timeout is %d sucess_process is %d processing time was %lf \n", data.GetTestDataId().c_str(), data.GetProcessTimeout(), data.GetSucessProcssed(), diff.count());
 			}
 
+
 		}
 		else if(ccQueue != QUEUE_SUCCESS & ccQueue != QUEUE_TIMEOUT)
 			printf("Failed to get data on %s with error %d \n", pTier1->reply_msg_queue.c_str(), ccQueue);
@@ -296,7 +297,7 @@ void Tier1::processReplyThread(bool * running, bool * stopped, void * usrPtr)
 		SleepOnQueue(ccQueue);
 	}
 
-	RemoveQueueReadThread(pTier1->reply_msg_queue);
+	RemoveQueueReadThread<MESSAGE>(pTier1->reply_msg_queue);
 	*stopped = true;
 }
 
@@ -308,7 +309,9 @@ void Tier1::timeoutReplyThread(bool * running, bool * stopped, void * usrPtr)
 	MESSAGE msg;
 	msg.delivered = false;
 	std::string msgId = "";
-	RegisterQueueReadThread(pTier1->timeout_queue);
+	std::string ssData = "";
+	InternalMsgTLV data;
+	RegisterQueueReadThread<std::string>(pTier1->timeout_queue);
 	int cc = 0;
 	int ccQueue = 0;
 
@@ -318,11 +321,11 @@ void Tier1::timeoutReplyThread(bool * running, bool * stopped, void * usrPtr)
 
 		if (ccQueue == QUEUE_SUCCESS)
 		{
-			TierMessageInternal data = pTier1->mapOustandingMessages.GetData(msgId, &cc, false); /* dont remove the message so we still have our outstanding */
+			data = pTier1->mapOustandingMessages.GetData(msgId, &cc, false); /* dont remove the message so we still have our outstanding */
 			if (cc == SUCCESS)
 			{
-				dataMsg = data.GetJsonData();
-				msg.ss.Write((char*)dataMsg.c_str(), dataMsg.length());
+				data.GetTLVFromData(&dataMsg);
+				msg.ss.assign((char*)dataMsg.c_str(), dataMsg.length());
 				printf("timeoutReplyThread timing out message %s \n", msgId.c_str());
 				cc = pQueueManager->PutDataOnQueue<MESSAGE>(&pTier1->reply_msg_queue, msg);
 
@@ -338,6 +341,6 @@ void Tier1::timeoutReplyThread(bool * running, bool * stopped, void * usrPtr)
 		SleepOnQueue(ccQueue);
 	}
 
-	RemoveQueueReadThread(pTier1->timeout_queue);
+	RemoveQueueReadThread<std::string>(pTier1->timeout_queue);
 	*stopped = true;
 }

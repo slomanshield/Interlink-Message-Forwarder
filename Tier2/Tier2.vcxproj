@@ -76,6 +76,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemGroup>
     <ClCompile Include="..\Global\BaseTimerEvent.cpp" />
+    <ClCompile Include="..\Global\InternalMsgTLV.cpp" />
     <ClCompile Include="..\Global\MessageForwarder.cpp" />
     <ClCompile Include="..\Global\QueueWrapper.cpp" />
     <ClCompile Include="..\Global\TcpBaseFuncs.cpp" />
@@ -86,6 +87,7 @@
   <ItemGroup>
     <ClInclude Include="..\Global\BaseTimerEvent.h" />
     <ClInclude Include="..\Global\global.h" />
+    <ClInclude Include="..\Global\InternalMsgTLV.h" />
     <ClInclude Include="..\Global\MessageForwarder.h" />
     <ClInclude Include="..\Global\MessageForwarderDefines.h" />
     <ClInclude Include="..\Global\MsgQueueDefines.h" />

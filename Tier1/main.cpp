@@ -13,21 +13,21 @@ int main(int arc, char** argv)
 	SetTermHandler();
 	Tier1 tier1;
 
-	for (int i = 0; i < 10000; i++)
+	for (int i = 0; i < 100000; i++)
 	{
 		padding.append("0"); /* do this to change payload size from typical ~300 to simulate larger payloads */
 	}
 
 	if ((cc = tier1.CreateInternalQueue()) == QUEUE_SUCCESS)
 	{
-		cc = tier1.StartProcessing(15, 15, 25, 25, 200);
+		cc = tier1.StartProcessing(20, 20, 25, 25, 400);
 
 		if (cc == 0)
 		{
-			TierMessageInternal internalMessage;
+			InternalMsgTLV internalMessage;
 			std::string uuid;
 
-			internalMessage.SetPadding(padding);
+			internalMessage.SetPadding(&padding);
 
 			while (TerminateApplication == false)
 			{
@@ -36,7 +36,7 @@ int main(int arc, char** argv)
 				internalMessage.SetTestDataId(uuid);
 				internalMessage.SetTimeStampCreate(HighResolutionTime::now().time_since_epoch().count());
 
-				cc = pQueueManager->PutDataOnQueue<TierMessageInternal>(&output_queue, internalMessage);
+				cc = pQueueManager->PutDataOnQueue<InternalMsgTLV>(&output_queue, internalMessage);
 
 				if (cc != QUEUE_SUCCESS)
 					printf("Error sending message onto %s with error code %d \n", output_queue.c_str(), cc);

@@ -20,7 +20,7 @@ int main()
 
 	if ((cc = tier3.CreateInternalQueue()) == QUEUE_SUCCESS)
 	{
-		cc = tier3.StartProcessing(20, 25, 25, 200);
+		cc = tier3.StartProcessing(20, 25, 25, 400);
 
 		if (cc == 0)
 		{
@@ -39,9 +39,15 @@ int main()
 			cc = tier3.StopProcessing();
 			if (cc != 0)
 			{
+				if (cc == connections_exist_on_shutdown)
+				{
+					printf("Connections exist, waiting... \n");
+					usleep(SERVER_UDP_INTERVAL); /* just sleep then check again */
+				}
+
+				retries++;
 				if (retries >= stopRetries)
 				{
-					retries++;
 					printf("Force Stopping Tier 3... \n");
 					tier3.StopProcessing(true); /* ok lets force stop probably a missing message */
 					cc = 0;
