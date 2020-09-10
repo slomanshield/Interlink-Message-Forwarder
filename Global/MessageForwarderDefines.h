@@ -5,7 +5,7 @@
 #include "UdpBaseFuncs.h"
 
 /* The concept for these structures are there are no version data 
-   there could be a case where clients could be upgrades before servers
+   there could be a case where clients could be upgraded before servers
    and vice versa. So data should always be appended. When it comes to udp its easy you just 
    wont see the data. For tcp we must skip over it (header length) */
 namespace MessageForwarder
