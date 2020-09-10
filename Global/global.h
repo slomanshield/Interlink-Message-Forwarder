@@ -57,7 +57,7 @@ template<typename ... Args>
 	return out;
 }
 
-static void GetJsonString(Document* doc, std::string* out)
+/* static void GetJsonString(Document* doc, std::string* out)
 {
 	rapidjson::StringBuffer buffer;
 
@@ -66,7 +66,7 @@ static void GetJsonString(Document* doc, std::string* out)
 
 	out->append(buffer.GetString());
 
-}
+} */
 
 class StringStreamWrapper
 {
@@ -143,7 +143,7 @@ public:
 
 
 /* TODO: this is a testing class should be removed when used */
-class TierMessageInternal
+/* class TierMessageInternal
 {
 public:
 	TierMessageInternal()
@@ -202,7 +202,7 @@ public:
 		Document doc;
 		std::string str;
 		doc.SetObject();
-		/* without passing doc allocator only pointer is used data is not copied for SetString */
+
 		testDataId.SetString(test_data_id.c_str(), test_data_id.length());
 		paddingStr.SetString(padding.c_str(), padding.length());
 		doc.AddMember("test_data_id", testDataId, doc.GetAllocator());
@@ -301,8 +301,7 @@ private:
 	bool process_timeout;
 	bool successful_process;
 	std::list<std::string> reply_ips;
-};
-
+}; */
 
 static void sig_term_handler(int signum)
 {

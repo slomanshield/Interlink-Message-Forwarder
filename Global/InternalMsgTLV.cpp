@@ -23,34 +23,6 @@ void InternalMsgTLV::Clear()
 	reply_ips.clear();
 }
 
-void InternalMsgTLV::CopyFields(const InternalMsgTLV* pMsgTLV)
-{
-	this->padding = pMsgTLV->padding;
-	this->test_data_id = pMsgTLV->test_data_id;
-	this->process_timeout = pMsgTLV->process_timeout;
-	this->successful_process = pMsgTLV->successful_process;
-	this->time_stamp_create_nano = pMsgTLV->time_stamp_create_nano;
-	this->reply_ips = pMsgTLV->reply_ips;
-}
-
-InternalMsgTLV::InternalMsgTLV(InternalMsgTLV& msgInternal)
-{
-	CopyFields(&msgInternal);
-}
-InternalMsgTLV::InternalMsgTLV(const InternalMsgTLV& msgInternal)
-{
-	CopyFields(&msgInternal);
-}
-void InternalMsgTLV::operator=(InternalMsgTLV&& msgInternal)
-{
-	CopyFields(&msgInternal);
-}
-InternalMsgTLV& InternalMsgTLV::operator=(const InternalMsgTLV& msgInternal)
-{
-	CopyFields(&msgInternal);
-	return *this;
-}
-
 void InternalMsgTLV::MoveString(char* in, std::string* out, LENGTH len)
 {
 	out->assign(in, len);

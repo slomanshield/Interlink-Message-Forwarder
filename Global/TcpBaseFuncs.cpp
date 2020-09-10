@@ -504,7 +504,7 @@ int TcpBaseFuncs::Recv(int socketFd, unsigned char* buffer, uint64_t inLength, u
 	if (sizeRecv == -1)
 	{
 		cc = errno;
-		if (cc == EWOULDBLOCK)// fake success for non blocking socket if there is no data
+		if (cc == EWOULDBLOCK || cc == EAGAIN)// fake success for non blocking socket if there is no data
 		{
 			cc = 0;
 			*lengthOut = 0;

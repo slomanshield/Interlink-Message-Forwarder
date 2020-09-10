@@ -29,10 +29,6 @@ class InternalMsgTLV
 public:
 	InternalMsgTLV();
 	~InternalMsgTLV();
-	InternalMsgTLV(InternalMsgTLV& msgInternal);
-	InternalMsgTLV(const InternalMsgTLV& msgInternal);
-	void operator=(InternalMsgTLV&& msgInternal);
-	InternalMsgTLV& operator=(const InternalMsgTLV& msgInternal);
 	InternalMsgTLV(char* inputStream, uint32_t streamLength);
 	void SetDataFromTLV(char* inputStream, uint32_t streamLength);
 	void GetTLVFromData(std::string* ss);
@@ -49,7 +45,6 @@ public:
 	uint64_t GetTimeStampCreate();
 private:
 	void Clear();
-	void CopyFields(const InternalMsgTLV* pMsgTLV);
 	void AddTLVData(TAG tag, LENGTH len, char* data, std::string* ss);
 	template<typename T> void AddTLVArrayData(std::list<T>* inArray, TAG tag, TYPE type, std::string* ss);
 	std::string test_data_id;

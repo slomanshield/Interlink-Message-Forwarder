@@ -52,7 +52,7 @@ namespace MessageForwarder
 			int WaitForOutStandingMessages(int timeoutMilli,char* ipAddress);
 			int WaitForOutStandingMessages(int timeoutMilli);
 			int AddSocketsToReadFd(ConnInfoList* pConnInfoList);
-			void AddNewConnections(IP_CONNECTION_INFO* pIpConnInfo, char* ipAddress, ConnInfoList* pConnInfoList);
+			void AddNewConnections(char* ipAddress, ConnInfoList* pConnInfoList);
 			int ProcessTcpMessage(CONNECTION_INFO* pConnInfo);
 			int ProcessTcpCommand(CONNECTION_INFO* pConnInfo, TCP_MESSAGE* pTcpMessage);
 			void RemoveDataFromReadBuffer(CONNECTION_INFO* pConnInfo, uint64_t length);

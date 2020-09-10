@@ -13,6 +13,7 @@
 #include <exception>
 #include <thread>
 #include <unistd.h>
+#include <shared_mutex>
 
 typedef std::chrono::milliseconds Milli;
 typedef std::chrono::high_resolution_clock HighResolutionTime;

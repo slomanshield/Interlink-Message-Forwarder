@@ -8,12 +8,12 @@ int main(int arc, char** argv)
 {
 	int cc = 0;
 	std::string output_queue = "output_tier1_queue";
-	std::string padding = ""; 
+	std::string padding = "";
 	QueueManager* pQueueManager = QueueManager::Instance(); /* just to statically init Queue Manager */
 	SetTermHandler();
 	Tier1 tier1;
 
-	for (int i = 0; i < 100000; i++)
+	for (int i = 0; i < 50000; i++)
 	{
 		padding.append("0"); /* do this to change payload size from typical ~300 to simulate larger payloads */
 	}
@@ -40,7 +40,7 @@ int main(int arc, char** argv)
 
 				if (cc != QUEUE_SUCCESS)
 					printf("Error sending message onto %s with error code %d \n", output_queue.c_str(), cc);
-				usleep(100);
+				usleep(1000000);
 			}
 		}
 

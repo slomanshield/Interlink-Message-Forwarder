@@ -76,12 +76,12 @@ int Tier1::StopProcessing()
 	if (msgForwarder == nullptr) /* if we dont have a pointer nothing has started */
 		return -1;
 
-	cc = pQueueManager->WaitForQueueToDrain<TierMessageInternal>(&output_queue, dbWaitTimeout);/* wait for queue to drain */
+	cc = pQueueManager->WaitForQueueToDrain<InternalMsgTLV>(&output_queue, dbWaitTimeout);/* wait for queue to drain */
 
 	if (cc != SUCCESS)
 	{
 		size_t queueSize = 0;
-		pQueueManager->GetQueuesize<TierMessageInternal>(&output_queue, &queueSize);
+		pQueueManager->GetQueuesize<InternalMsgTLV>(&output_queue, &queueSize);
 
 		printf("StopProcessing(): Error waiting for %s to drain size is %llu \n", output_queue.c_str(), queueSize);
 	}
@@ -106,7 +106,7 @@ int Tier1::StopProcessing()
 		if (cc != QUEUE_SUCCESS)
 		{
 			size_t queueSize = 0;
-			pQueueManager->GetQueuesize<TierMessageInternal>(&reply_msg_queue, &queueSize);
+			pQueueManager->GetQueuesize<MESSAGE>(&reply_msg_queue, &queueSize);
 
 			printf("StopProcessing(): Error waiting for %s to drain size is %llu \n", reply_msg_queue.c_str(), queueSize);
 		}
@@ -167,8 +167,8 @@ void Tier1::DestroyInternalQueue()
 {
 	pQueueManager->DeleteQueue<MESSAGE>(&output_msg_queue, true);
 	pQueueManager->DeleteQueue<MESSAGE>(&reply_msg_queue, true);
-	pQueueManager->DeleteQueue<MESSAGE>(&output_queue, true);
-	pQueueManager->DeleteQueue<MESSAGE>(&timeout_queue, true);
+	pQueueManager->DeleteQueue<InternalMsgTLV>(&output_queue, true);
+	pQueueManager->DeleteQueue<std::string>(&timeout_queue, true);
 }
 
 int Tier1::WaitForQueueConnection()
@@ -263,7 +263,6 @@ void Tier1::processReplyThread(bool * running, bool * stopped, void * usrPtr)
 	MESSAGE dataMsg;
 	int cc = 0;
 	int ccQueue = 0;
-	std::string dataStr = "";
 	InternalMsgTLV data;
 	RegisterQueueReadThread<MESSAGE>(pTier1->reply_msg_queue);
 
@@ -309,7 +308,6 @@ void Tier1::timeoutReplyThread(bool * running, bool * stopped, void * usrPtr)
 	MESSAGE msg;
 	msg.delivered = false;
 	std::string msgId = "";
-	std::string ssData = "";
 	InternalMsgTLV data;
 	RegisterQueueReadThread<std::string>(pTier1->timeout_queue);
 	int cc = 0;

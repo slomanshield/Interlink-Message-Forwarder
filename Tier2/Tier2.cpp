@@ -112,12 +112,12 @@ int Tier2::StopProcessing(bool forceStop)
 
 	msgForwarderInput->BeginStop(); /* while we wait for messages lets start telling clients to stop, this could be called in main  */
 
-	cc = pQueueManager->WaitForQueueToDrain<TierMessageInternal>(&input_tier2_msg_queue, dbWaitTimeout);/* wait for queue to drain */
+	cc = pQueueManager->WaitForQueueToDrain<MESSAGE>(&input_tier2_msg_queue, dbWaitTimeout);/* wait for queue to drain */
 
 	if (cc != QUEUE_SUCCESS)
 	{
 		size_t queueSize = 0;
-		pQueueManager->GetQueuesize<TierMessageInternal>(&input_tier2_msg_queue, &queueSize);
+		pQueueManager->GetQueuesize<MESSAGE>(&input_tier2_msg_queue, &queueSize);
 
 		printf("StopProcessing(): Error waiting for %s to drain size is %llu \n", input_tier2_msg_queue.c_str(), queueSize);
 	}

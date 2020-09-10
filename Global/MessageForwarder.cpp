@@ -656,10 +656,7 @@ namespace MessageForwarder
 		for (ConnInfoListItr itr = pConnInfoList->begin(); itr != pConnInfoList->end(); itr++)
 		{
 			pConnInfo = (*itr);
-			event.data.fd = pConnInfo->connFd;
-			event.events = EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLET;
-
-			cc = AddSocketToEpoll(pConnInfo->connFd, connReadEpollFd, &event);
+			cc = ArmReadConnFd(pConnInfo->connFd, true);
 
 			if (cc != 0)
 				break;
@@ -695,11 +692,19 @@ namespace MessageForwarder
 		return numConnections;
 	}
 
-	void MessageForwarder::AddNewConnections(IP_CONNECTION_INFO* pIpConnInfo, char* ipAddress, ConnInfoList* pConnInfoList)
+	void MessageForwarder::AddNewConnections(char* ipAddress, ConnInfoList* pConnInfoList)
 	{
 		CONNECTION_INFO* pConnInfo = nullptr;
+		IP_CONNECTION_INFO* pIpConnInfo = nullptr;
 		IpSocketMapItr ipSocketMapItr;
 		std::unique_lock lockMaps(m_Maps);
+
+		/* if it doesnt eixst create it */
+		ipSocketMapItr = ipSocketMap.find(ipAddress);
+		if (ipSocketMapItr == ipSocketMap.end())
+			pIpConnInfo = new IP_CONNECTION_INFO;
+		else
+			pIpConnInfo = (*ipSocketMapItr).second;
 
 		/* lets add these bad boys in */
 		for (ConnInfoListItr itr = pConnInfoList->begin(); itr != pConnInfoList->end(); itr++)
@@ -730,16 +735,7 @@ namespace MessageForwarder
 
 		if (numConnections < numConnectionsPerHost)/* ok we either dont have enough or non at all */
 		{
-			/* no need for a lock since this call is single threaded and its only a read */
-			IpSocketMapItr ipMapItr = ipSocketMap.find(ipAddress);
-			
 			numToConnect = numConnectionsPerHost - numConnections;
-
-			/* if it doesnt eixst create it */
-			if (ipMapItr == ipSocketMap.end())
-				pIpConnInfo = new IP_CONNECTION_INFO; 
-			else
-				pIpConnInfo = (*ipMapItr).second;
 
 			/* connect and add to the list */
 			for (int i = 0; i < numToConnect; i++)
@@ -781,7 +777,7 @@ namespace MessageForwarder
 				if (cc == 0)
 				{
 					/* lets add the sockets to the list */
-					AddNewConnections(pIpConnInfo, ipAddress, &connInfoList);
+					AddNewConnections(ipAddress, &connInfoList);
 
 					cc = AddSocketsToReadFd(&connInfoList);
 				}
@@ -807,9 +803,6 @@ namespace MessageForwarder
 					delete pConnInfo;
 				}
 
-				/* no need for a lock since this call is single threaded and its only a read */
-				if (ipSocketMap.find(ipAddress) == ipSocketMap.end())
-					delete pIpConnInfo;
 			}
 			
 		}
@@ -1057,8 +1050,8 @@ namespace MessageForwarder
 			else
 				pPayload->command = (uint16_t)add;
 
-			strncpy(pPayload->ip_node, address.c_str(), IP_LENGTH);
-			strncpy(pPayload->queue_name, queue_name.c_str(), QUEUE_NAME_LENGTH);
+			strncpy(pPayload->ip_node, address.data(), IP_LENGTH);
+			strncpy(pPayload->queue_name, queue_name.data(), QUEUE_NAME_LENGTH);
 		}
 
 		return cc;
@@ -1078,7 +1071,7 @@ namespace MessageForwarder
 		if (cc == 0)
 		{
 			UDP_MULTICAST_PAYLOAD* pUdpPayload = (UDP_MULTICAST_PAYLOAD*)buffer;
-			if (strncmp(pUdpPayload->queue_name, queue_name.c_str(), QUEUE_NAME_LENGTH) == 0)
+			if (strncmp(pUdpPayload->queue_name, queue_name.data(), QUEUE_NAME_LENGTH) == 0)
 			{
 				if (pUdpPayload->command == udp_commands::add)
 				{
@@ -1217,14 +1210,14 @@ namespace MessageForwarder
 				pConnInfo->lengthToRead = 0;
 				
 				msg.isResponse = true;
-				msg.ss = pConnInfo->ss;
+				msg.ss.assign((char*)pConnInfo->ss.data(), pConnInfo->ss.length());
 				msg.replyIpAddress = pConnInfo->peerIpAddress;
 				cc = pQueueManager->PutDataOnQueue<MESSAGE>(&i_input_queue_name, msg);
 
 				if (cc != QueueWrapper::QUEUE_SUCCESS)
 				{
 					printf("Error: ProcessTcpMessage (PutDataOnQueue) error code : %d dumping hex \n %s \n", cc,
-						GetHexString((char*)pConnInfo->ss.c_str(), pConnInfo->ss.length()).c_str());
+						GetHexString((char*)pConnInfo->ss.data(), pConnInfo->ss.length()).c_str());
 				}
 					
 
@@ -1271,6 +1264,8 @@ namespace MessageForwarder
 		if (pConnInfo->readBufferDataLength >= sizeof(TCP_MESSAGE_V01))
 			cc = ProcessTcpPayload(pConnInfo);
 
+			
+
 		return cc;
 	}
 
@@ -1298,6 +1293,7 @@ namespace MessageForwarder
 					{
 						uint64_t dataRead = 0;
 
+						memset(buffer, 0, UDP_RAW_BUFFER_SIZE);
 						cc = pMessageForwarder->RecvFrom(pMessageForwarder->udpFd, buffer, bufferLength, &dataRead);
 
 						if (cc == 0 && dataRead > 0)
@@ -1389,15 +1385,15 @@ namespace MessageForwarder
 		MessageForwarder* pMessageForwarder = (MessageForwarder *)usrPtr;
 		int cc = 0;
 		RegisterQueueReadThread<std::string>(pMessageForwarder->i_command_queue_name);
-		std::string ss = "";
+		std::string data = "";
 
 		while (*running == true)
 		{
-			ss = pMessageForwarder->pQueueManager->GetDataFromQueue<std::string>(&pMessageForwarder->i_command_queue_name,
+			data = pMessageForwarder->pQueueManager->GetDataFromQueue<std::string>(&pMessageForwarder->i_command_queue_name,
 				                                                                    pMessageForwarder->internalThreadTimeoutMilli, &cc);
 			if (cc == QueueWrapper::QUEUE_SUCCESS)
 			{
-				cc = pMessageForwarder->ProcessUdpPayload((unsigned char*)ss.c_str(), ss.length());
+				cc = pMessageForwarder->ProcessUdpPayload((unsigned char*)data.data(), data.length());
 
 				if (cc != 0 && cc != connections_already_exist)
 					printf("Error: UdpCommandProcessThread (ProcessUdpPayload) error code %d \n", cc);
@@ -1451,10 +1447,11 @@ namespace MessageForwarder
 						if (socketMapItr != pMessageForwarder->socketConnMap.end())
 						{
 							pConnInfo = (*socketMapItr).second;
+							
 							do
 							{
 								cc = pMessageForwarder->Recv(pEvents[i].data.fd, pMessageForwarder->GetReadBufferPos(pConnInfo),
-									                         pMessageForwarder->GetReadBufferFreeLength(pConnInfo), &numBytesRead);
+									pMessageForwarder->GetReadBufferFreeLength(pConnInfo), &numBytesRead);
 								if (cc == 0 && numBytesRead > 0)
 								{
 									pConnInfo->readBufferDataLength += numBytesRead;
@@ -1467,11 +1464,11 @@ namespace MessageForwarder
 								{
 									if (numBytesRead == 0 && cc == 0 && pConnInfo->readBufferDataLength == TCP_RAW_READ_BUFFER_SIZE)
 										printf("Error: No more free buffer space on %d dumping hex \n%s\n",
-											    pEvents[i].data.fd, GetHexString(pConnInfo->readBuffer, pConnInfo->readBufferDataLength).c_str());
+											pEvents[i].data.fd, GetHexString(pConnInfo->readBuffer, pConnInfo->readBufferDataLength).c_str());
 									pMessageForwarder->RemoveDataFromReadBuffer(pConnInfo, TCP_RAW_READ_BUFFER_SIZE); /* clear the buffer */
 								}
-							}
-							while ((cc == 0 && numBytesRead > 0) || cc == EINTR); /* if we interrupt try again or waiting on data to be sent over */
+							} while ((cc == 0 && numBytesRead > 0) || cc == EINTR); /* if we interrupt try again or waiting on data to be sent over */
+							
 						}
 						else
 							printf("Info: Unknown Socket : %d \n", pEvents[i].data.fd); /* possibly get here on a forced connection cut */
@@ -1514,7 +1511,6 @@ namespace MessageForwarder
 		uint32_t currentOffset = 0;
 		SocketConnMapItr socketConnMapItr;
 		IpSocketMapItr ipSocketMapItr;
-		std::string bufferToSend = "";
 		TCP_MESSAGE tcp_message; /* initalizers set in header */
 		IP_CONNECTION_INFO* pIpConnInfo = nullptr;
 		CONNECTION_INFO* pConnInfo = nullptr;
@@ -1683,7 +1679,7 @@ namespace MessageForwarder
 			{
 				pMessageForwarder->IncreaseEventsCount(1);
 
-				cc = pMessageForwarder->AddConnection((char*)peerIpdAddress.c_str(), connFd);
+				cc = pMessageForwarder->AddConnection((char*)peerIpdAddress.data(), connFd);
 
 				if (cc == 0)
 				{
