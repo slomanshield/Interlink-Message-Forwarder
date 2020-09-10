@@ -17,7 +17,6 @@ namespace MessageForwarder
 
 	#define MULTI_CAST_GROUP "226.20.1.1"
 
-	#define VERSION_LENGTH 2
 	#define IP_LENGTH 15
 	#define QUEUE_NAME_LENGTH 256
 
