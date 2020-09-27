@@ -12,13 +12,13 @@ namespace MessageForwarder
 		public:
 			MessageForwarder(uint16_t port, std::string queue_name, std::string input_queue_name, std::string output_queue_name,
 							 int numSenders, int numReaders, int numConnectionsPerHost, mode iMode, int connectionTimeoutMilli,
-				             uint64_t ioBufferSize, bool manageOutStanding = true);
+				             uint64_t ioBufferSize, bool manageOutStanding = true, std::string multiCastGroup = "");
 			~MessageForwarder();
 			int Init();
 			int Start(std::string* tcpListenIP = nullptr);
 			int Stop(int timeoutMilli, bool waitForOutStanding = true, bool forceServerClose = false);
 			void BeginStop(); /* Server only, used by a server to let clients know to stop sending messages and disconnect */
-			int SendData(char* s,uint64_t length, std::string* replyIp, MESSAGE* pMsgIn);
+			int SendData(char* s,uint32_t length, std::string* replyIp, MESSAGE* pMsgIn);
 			int WaitForConnections(int timeoutMilli);
 		private:
 			int InitUdp();
@@ -55,7 +55,7 @@ namespace MessageForwarder
 			void AddNewConnections(char* ipAddress, ConnInfoList* pConnInfoList);
 			int ProcessTcpMessage(CONNECTION_INFO* pConnInfo);
 			int ProcessTcpCommand(CONNECTION_INFO* pConnInfo, TCP_MESSAGE* pTcpMessage);
-			void RemoveDataFromReadBuffer(CONNECTION_INFO* pConnInfo, uint64_t length);
+			void RemoveDataFromReadBuffer(CONNECTION_INFO* pConnInfo, uint32_t length);
 			unsigned char* GetReadBufferPos(CONNECTION_INFO* pConnInfo);
 			uint64_t GetReadBufferFreeLength(CONNECTION_INFO* pConnInfo);
 			void IncreaseEventsCount(int numEvents);

@@ -246,7 +246,7 @@ void Tier1::recieveDataThread(bool * running, bool * stopped, void * usrPtr)
 			else
 				printf("Error MAX OUTSTANDING REACHED for %s message \n", data.GetTestDataId().c_str());
 		}
-		else if (ccQueue != QUEUE_SUCCESS & ccQueue != QUEUE_TIMEOUT)
+		else if (ccQueue != QUEUE_SUCCESS && ccQueue != QUEUE_TIMEOUT)
 			printf("Failed to get data on %s with error %d \n", pTier1->output_queue.c_str(), ccQueue);
 
 		SleepOnQueue(ccQueue);
@@ -290,7 +290,7 @@ void Tier1::processReplyThread(bool * running, bool * stopped, void * usrPtr)
 
 
 		}
-		else if(ccQueue != QUEUE_SUCCESS & ccQueue != QUEUE_TIMEOUT)
+		else if(ccQueue != QUEUE_SUCCESS && ccQueue != QUEUE_TIMEOUT)
 			printf("Failed to get data on %s with error %d \n", pTier1->reply_msg_queue.c_str(), ccQueue);
 
 		SleepOnQueue(ccQueue);
@@ -333,7 +333,7 @@ void Tier1::timeoutReplyThread(bool * running, bool * stopped, void * usrPtr)
 			else
 				printf("timeoutReplyThread failed to find msgId in outstanding list %s \n", msgId.c_str());
 		}
-		else if(ccQueue != QUEUE_SUCCESS & ccQueue != QUEUE_TIMEOUT)
+		else if(ccQueue != QUEUE_SUCCESS && ccQueue != QUEUE_TIMEOUT)
 			printf("Failed to get data on %s with error %d \n", pTier1->timeout_queue.c_str(), ccQueue);
 
 		SleepOnQueue(ccQueue);

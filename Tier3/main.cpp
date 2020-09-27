@@ -20,7 +20,7 @@ int main()
 
 	if ((cc = tier3.CreateInternalQueue()) == QUEUE_SUCCESS)
 	{
-		cc = tier3.StartProcessing(20, 25, 25, 400);
+		cc = tier3.StartProcessing(20, 25, 25, 100);
 
 		if (cc == 0)
 		{

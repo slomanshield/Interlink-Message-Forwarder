@@ -86,6 +86,7 @@ namespace QueueWrapper
 			QueueManager();
 			~QueueManager();
 			static QueueManager* pQueueManagerInstance;
+			static std::mutex m_instance;
 			std::unordered_map< std::string, void*> queueMap;
 			std::mutex m_queues;
 	};

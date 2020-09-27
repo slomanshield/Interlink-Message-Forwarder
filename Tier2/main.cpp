@@ -23,7 +23,7 @@ int main()
 
 	if ((cc = tier2.CreateInternalQueue()) == QUEUE_SUCCESS)
 	{
-		cc = tier2.StartProcessing(20, 20, 25, 25, 400);
+		cc = tier2.StartProcessing(20, 20, 25, 25, 100);
 
 		if (cc == 0)
 		{

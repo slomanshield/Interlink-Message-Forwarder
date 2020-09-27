@@ -110,11 +110,11 @@ namespace MessageForwarder
 		bool readyToProcess = false; /* to be used for readers only when an ack is sent by the server */
 		std::mutex m_conn; /* mutex used to lock when sending data (only 1 thread can send at a time) */
 		std::string ss = ""; /* used by readers only */
-		uint64_t lengthToRead = 0; /* used by readers only */
-		uint64_t lengthLeftToRead = 0; /* used by readers only */
+		uint32_t lengthToRead = 0; /* used by readers only */
+		uint32_t lengthLeftToRead = 0; /* used by readers only */
 		uint32_t lengthToSkip = 0; /* used by readers only */
 		char readBuffer[TCP_RAW_READ_BUFFER_SIZE] = { 0 };
-		uint64_t readBufferDataLength = 0; /* used by readers only current length of buffer */
+		uint32_t readBufferDataLength = 0; /* used by readers only current length of buffer */
 	};
 	typedef std::unordered_map<int, CONNECTION_INFO*> SocketConnMap; /* used by sending/reading threads (fd, connection) */
 

@@ -13,14 +13,14 @@ int main(int arc, char** argv)
 	SetTermHandler();
 	Tier1 tier1;
 
-	for (int i = 0; i < 50000; i++)
+	for (int i = 0; i < 1000; i++)
 	{
 		padding.append("0"); /* do this to change payload size from typical ~300 to simulate larger payloads */
 	}
 
 	if ((cc = tier1.CreateInternalQueue()) == QUEUE_SUCCESS)
 	{
-		cc = tier1.StartProcessing(20, 20, 25, 25, 400);
+		cc = tier1.StartProcessing(20, 20, 25, 25, 100);
 
 		if (cc == 0)
 		{
@@ -40,7 +40,7 @@ int main(int arc, char** argv)
 
 				if (cc != QUEUE_SUCCESS)
 					printf("Error sending message onto %s with error code %d \n", output_queue.c_str(), cc);
-				usleep(1000000);
+				usleep(500);
 			}
 		}
 

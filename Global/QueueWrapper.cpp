@@ -1,6 +1,7 @@
 #include "QueueWrapper.h"
 
 QueueWrapper::QueueManager* QueueWrapper::QueueManager::pQueueManagerInstance = nullptr;
+std::mutex QueueWrapper::QueueManager::m_instance;
 
 QueueWrapper::QueueManager::QueueManager()
 {
@@ -25,7 +26,12 @@ void QueueWrapper::QueueManager::DeleteInstance()
 QueueWrapper::QueueManager* QueueWrapper::QueueManager::Instance()
 {
 	if (pQueueManagerInstance == nullptr)
-		pQueueManagerInstance = new QueueManager();
+	{
+		std::lock_guard lock(m_instance); /* only 1 called actually creates the pointer */
+		if(pQueueManagerInstance == nullptr)
+			pQueueManagerInstance = new QueueManager();
+	}
+		
 
 	return pQueueManagerInstance;
 }

@@ -94,10 +94,11 @@ int Tier2::StartProcessing(int numRecieveDataThreads, int numProcessreplyThreads
 	if (cc == 0)
 	{
 		cc = msgForwarderInput->Start(); /* everything is ready open the flood gates */
-		if(cc != SUCCESS)
+		if (cc != SUCCESS)
 			printf("Error msgForwarderInput->Start() with error code %d \n", cc);
 	}
 
+	return cc;
 }
 
 /* in the main we might need to call this multiple times while messages are being sent after n tries we should shut down forcefully */
@@ -235,7 +236,7 @@ void Tier2::recieveDataThread(bool * running, bool * stopped, void * usrPtr)
 				printf("Error message from msgForwarderInput %d \n", dataMsg.reasonCode);
 
 		}
-		else if(ccQueue != QUEUE_SUCCESS & ccQueue != QUEUE_TIMEOUT)
+		else if(ccQueue != QUEUE_SUCCESS && ccQueue != QUEUE_TIMEOUT)
 			printf("Failed to get data on %s with error %d \n", pTier2->input_tier2_msg_queue.c_str(), ccQueue);
 
 		SleepOnQueue(ccQueue);
@@ -280,7 +281,7 @@ void Tier2::processReplyThread(bool * running, bool * stopped, void * usrPtr)
 				printf("Error message from msgForwarderOutput %d \n", dataMsg.reasonCode);
 
 		}
-		else if (ccQueue != QUEUE_SUCCESS & ccQueue != QUEUE_TIMEOUT)
+		else if (ccQueue != QUEUE_SUCCESS && ccQueue != QUEUE_TIMEOUT)
 			printf("Failed to get data on %s with error %d \n", pTier2->reply_tier3_msg_queue.c_str(), ccQueue);
 
 		SleepOnQueue(ccQueue);

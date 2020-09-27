@@ -4,7 +4,7 @@ namespace MessageForwarder
 {
 	MessageForwarder::MessageForwarder(uint16_t port, std::string queue_name, std::string input_queue_name, std::string output_queue_name,
 		                               int numSenders, int numReaders, int numConnectionsPerHost, mode iMode, int connectionTimeoutMilli,
-		                               uint64_t ioBufferSize,bool manageOutStanding)
+		                               uint64_t ioBufferSize,bool manageOutStanding,std::string multiCastGroup)
 	{
 		this->port = port;
 		this->i_input_queue_name = input_queue_name;
@@ -28,11 +28,15 @@ namespace MessageForwarder
 		numEvents = 0;
 		pQueueManager = QueueWrapper::QueueManager::Instance();
 		internalThreadTimeoutMilli = THREAD_WAIT_TIMEOUT;
-		multiCastGroup = MULTI_CAST_GROUP;
 		listenOverrideTcpIP = "";
 
 		if (ioBufferSize < sizeof(TCP_MESSAGE) || ioBufferSize < sizeof(UDP_MULTICAST_PAYLOAD))
 			this->ioBufferSize = sizeof(TCP_MESSAGE) + sizeof(UDP_MULTICAST_PAYLOAD);
+
+		if (multiCastGroup.length() == 0)
+			this->multiCastGroup = MULTI_CAST_GROUP;
+		else
+			this->multiCastGroup = multiCastGroup;
 
 		UdpThreadHandler.SetProcessthread(UdpThread);
 		UdpCommandProcessThreadHandler.SetProcessthread(UdpCommandProcessThread);
@@ -440,7 +444,7 @@ namespace MessageForwarder
 		return cc;
 	}
 
-	int MessageForwarder::SendData(char* s, uint64_t length, std::string* replyIp, MESSAGE* pMsgIn)
+	int MessageForwarder::SendData(char* s, uint32_t length, std::string* replyIp, MESSAGE* pMsgIn)
 	{
 		int cc = 0;
 		TCP_MESSAGE tcp_message;
@@ -649,7 +653,6 @@ namespace MessageForwarder
 	int MessageForwarder::AddSocketsToReadFd(ConnInfoList* pConnInfoList)
 	{
 		int cc = 0;
-		struct epoll_event event = { 0 };
 		CONNECTION_INFO* pConnInfo = nullptr;
 
 		IncreaseEventsCount(0); /* connections are already on the list so just increase by that size */
@@ -727,7 +730,6 @@ namespace MessageForwarder
 		int cc = 0;
 		int numConnections = 0;
 		int numToConnect = 0;
-		IP_CONNECTION_INFO* pIpConnInfo = nullptr;
 		CONNECTION_INFO* pConnInfo = nullptr;
 		ConnInfoList connInfoList;
 
@@ -1114,7 +1116,7 @@ namespace MessageForwarder
 		return cc;
 	}
 
-	void MessageForwarder::RemoveDataFromReadBuffer(CONNECTION_INFO* pConnInfo, uint64_t length)
+	void MessageForwarder::RemoveDataFromReadBuffer(CONNECTION_INFO* pConnInfo, uint32_t length)
 	{
 		if (length >= pConnInfo->readBufferDataLength)
 		{
@@ -1124,7 +1126,7 @@ namespace MessageForwarder
 		else if(length != 0)
 		{
 			/* What we are doing here is just overwriting the data and changing the length */
-			uint64_t remaining = pConnInfo->readBufferDataLength - length;
+			uint32_t remaining = pConnInfo->readBufferDataLength - length;
 
 			memmove(pConnInfo->readBuffer, &pConnInfo->readBuffer[length], remaining);
 
@@ -1182,7 +1184,7 @@ namespace MessageForwarder
 		/* now lets read in the buffer */
 		if (pConnInfo->lengthToRead > 0 && pConnInfo->readBufferDataLength > 0) /* saftey check if we didnt just skip over everything we read in */
 		{
-			uint64_t dataToWrite = 0;
+			uint32_t dataToWrite = 0;
 
 			/* our buffer is bigger than what we need */
 			if (pConnInfo->readBufferDataLength > pConnInfo->lengthLeftToRead)
